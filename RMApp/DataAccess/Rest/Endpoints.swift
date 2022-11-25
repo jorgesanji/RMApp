@@ -15,6 +15,7 @@ enum HttpMethod: String {
 enum Endpoints {
     
     case getCharactersByPage(_ page: Int)
+    case getCharacterEpisodesByIds(_ ids: [Int])
     
     var url: URL {
         guard let url = URL(string: "https://rickandmortyapi.com" ) else {
@@ -27,12 +28,14 @@ enum Endpoints {
         switch self {
         case .getCharactersByPage:
             return "/api/character/"
+        case .getCharacterEpisodesByIds(let episodes):
+            return "/api/episode/" + episodes.description
         }
     }
     
     var method: HttpMethod {
         switch self {
-        case .getCharactersByPage:
+        case .getCharactersByPage, .getCharacterEpisodesByIds:
             return.get
         }
     }
@@ -41,6 +44,8 @@ enum Endpoints {
         switch self {
         case .getCharactersByPage(let page):
             return [URLQueryItem(name: "page", value: String(page))]
+        default:
+            return []
         }
     }
     

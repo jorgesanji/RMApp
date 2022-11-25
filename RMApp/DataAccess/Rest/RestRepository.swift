@@ -9,6 +9,7 @@ import Combine
 
 protocol RestRepository {
     func getCharactersByPage(_ page: Int) -> AnyPublisher<CharactersResponse, Error>
+    func getCharacterEpisodesByIds(_ ids: [Int]) -> AnyPublisher<[Episode], Error>
 }
 
 final class RestRepositoryImpl: RestRepository {
@@ -21,5 +22,9 @@ final class RestRepositoryImpl: RestRepository {
     
     func getCharactersByPage(_ page: Int) -> AnyPublisher<CharactersResponse, Error> {
         apiService.getCharactersByPage(page)
+    }
+    
+    func getCharacterEpisodesByIds(_ ids: [Int]) -> AnyPublisher<[Episode], Error> {
+        apiService.getCharacterEpisodesByIds(ids)
     }
 }

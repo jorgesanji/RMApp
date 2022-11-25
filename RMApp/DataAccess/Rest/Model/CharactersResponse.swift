@@ -6,6 +6,6 @@
 //
 
 struct CharactersResponse: Decodable {
-let info: Info
+    let info: Info
     let results: [Character]
 }

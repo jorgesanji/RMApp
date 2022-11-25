@@ -20,7 +20,9 @@ struct HomeView: View {
             ZStack {
                 switch viewModel.state {
                 case .error:
-                    errorView
+                    ErrorView {
+                        viewModel.send(event: .retry)
+                    }
                 case .results:
                     gridView
                 case .initial:
@@ -42,10 +44,6 @@ struct HomeView: View {
         ProgressView().progressViewStyle(CircularProgressViewStyle())
     }
     
-    private var errorView: some View {
-        Text("empty")
-    }
-    
     private var emptyView: some View {
         Text("empty")
     }
@@ -55,10 +53,15 @@ struct HomeView: View {
     private var gridView: some View {
         ScrollView {
             LazyVGrid(columns: gridItemLayout, spacing: 10) {
-                ForEach((0..<viewModel.data.count), id: \.self) { index in
-                    NavigationLink(destination: CharacterDetailView()) {
-                        CharacterItemView(viewModel: viewModel.data[index])
+                ForEach((0..<viewModel.getCharactersCount()), id: \.self) { index in
+                    NavigationLink(destination:
+                                    CharacterDetailView(viewModel: .init(itemViewModel: viewModel.getCharacterViewModel(at: index)))){
+                        
+                        CharacterItemView(viewModel: viewModel.getCharacterViewModel(at: index))
                             .frame(width: 86, height: 185)
+                            .onAppear {
+                                viewModel.send(event: .fetchNextPage)
+                            }
                     }
                 }
             }
@@ -85,7 +88,7 @@ struct CharacterItemView: View {
                 .frame(width: 60, height: 60)
                 .clipShape(Circle())
                 .padding(.init(top: 0.5, leading: 5, bottom: 0, trailing: 5))
-
+                
                 Text(viewModel.name)
                     .foregroundColor(.black)
                     .font(.system(size: 14, weight: .bold, design: .default))
@@ -110,15 +113,14 @@ struct CharacterItemView: View {
     }
 }
 
-
 struct CharacterItemView_Previews: PreviewProvider {
     static var previews: some View {
-        CharacterItemView(viewModel: CharacterItemViewModel( id: 1, name: "test", image: "https://usercontent.one/wp/www.swiftlyrush.com/wp-content/uploads/2021/11/image-2.png?media=1637150467", origin: "Barcelona", status: "Vivo"))
+        CharacterItemView(viewModel: CharacterItemViewModelImpl(character:
+                .init(id: 1,
+                      name: "Test",
+                      status: "live",
+                      origin: .init(name: "Barcelona", url: ""),
+                      image: "https://rickandmortyapi.com/api/character/avatar/1.jpeg",
+                      episodes: [])))
     }
 }
-
-/*struct HomeView_Previews: PreviewProvider {
- static var previews: some View {
- HomeView(viewModel: HomeViewModel())
- }
- }*/

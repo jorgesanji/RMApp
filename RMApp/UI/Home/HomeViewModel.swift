@@ -38,7 +38,7 @@ final class HomeViewModel: BaseViewModel<HomeState, HomeEvent> {
     private var maxPageCount: Int = 0
     private final let restRepository: RestRepository
     
-    var data: [CharacterItemViewModel] = []
+    private var data: [CharacterItemViewModel] = []
     
     init(restRepository: RestRepository = RestRepositoryImpl()) {
         self.restRepository = restRepository
@@ -52,13 +52,16 @@ final class HomeViewModel: BaseViewModel<HomeState, HomeEvent> {
             fetchCharacters()
             return .loading
             
+        case (.results, .fetchNextPage):
+            loadNextPage()
+            break
         case (.loading, .didFetchResultsSuccessfully(let result)):
             self.maxPageCount = result.info.pages
-            data.append(contentsOf: result.results.map {.init( id: $0.id, name: $0.name, image: $0.image, origin: $0.origin.name, status: $0.status)})
+            data.append(contentsOf: result.results.map {CharacterItemViewModelImpl(character: $0)})
             return .results
             
         case (.results, .didFetchResultsSuccessfully(let result)):
-            data.append(contentsOf: result.results.map {.init( id: $0.id, name: $0.name, image: $0.image, origin: $0.origin.name, status: $0.status)})
+            data.append(contentsOf: result.results.map {CharacterItemViewModelImpl(character: $0)})
             return .results
             
         case (.loading, .didFetchResultsFailure(let error)):
@@ -69,7 +72,7 @@ final class HomeViewModel: BaseViewModel<HomeState, HomeEvent> {
             return .empty
             
         case (.results, .didFetchResultsEmpty):
-            break // Don't change the state to empty as we have some results to show to the user.
+            break
             
         case (.results, .reload):
             break
@@ -77,6 +80,10 @@ final class HomeViewModel: BaseViewModel<HomeState, HomeEvent> {
         case (.empty, .retry), (.error, .retry):
             fetchCharacters()
             return .loading
+            
+        case (.results, .retry):
+            fetchCharacters()
+            return .results
             
         default:
             fatalError("Event not handled...")
@@ -89,12 +96,14 @@ final class HomeViewModel: BaseViewModel<HomeState, HomeEvent> {
         switch(oldState, newState) {
         case (.initial, .loading):
             break
-        case (.loading, .results):
+        case (.loading, .results), (.results, .loading):
             break
         case (.loading, .empty):
             data = []
             stateError = nil
         case (.error, .loading):
+            stateError = nil
+        case (.results, .results):
             stateError = nil
         case (.loading, .error), (.empty, .loading):
             data = []
@@ -104,9 +113,26 @@ final class HomeViewModel: BaseViewModel<HomeState, HomeEvent> {
         }
     }
     
+    // MARK: Public
+
+    func getCharactersCount() -> Int {
+        data.count
+    }
+    
+    func getCharacterViewModel(at: Int) -> CharacterItemViewModel {
+        data[at]
+    }
+    
     // MARK: Private
     
-    private func fetchCharacters() {        
+    private func loadNextPage() {
+        if page < maxPageCount {
+            page = page + 1
+            fetchCharacters()
+        }
+    }
+    
+    private func fetchCharacters() {
         restRepository.getCharactersByPage(page).sink {[weak self] completion in
             guard let self = self else { return }
             os_log("completion done", type: .debug)
@@ -128,10 +154,29 @@ final class HomeViewModel: BaseViewModel<HomeState, HomeEvent> {
     }
 }
 
-struct CharacterItemViewModel {
+protocol CharacterItemViewModel {
+    var id: Int { get }
+    var name: String { get }
+    var image: String { get }
+    var origin: String { get }
+    var status: String { get }
+    var episodes: [Int] { get }
+}
+
+struct CharacterItemViewModelImpl: CharacterItemViewModel {
     let id: Int
     let name: String
     let image: String
     let origin: String
     let status: String
+    let episodes: [Int]
+    
+    init(character: Character) {
+        self.id = character.id
+        self.name = character.name
+        self.image = character.image
+        self.origin = character.origin.name
+        self.status = character.status
+        self.episodes = character.episodes
+    }
 }
